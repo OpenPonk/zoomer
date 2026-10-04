@@ -8,7 +8,8 @@ Class {
 		'diagonalDPI',
 		'horizontalDPI',
 		'verticalDPI',
-		'activeSource'
+		'activeSource',
+		'backendBaseDPI'
 	],
 	#category : 'OpenPonk-Zoomer-Model',
 	#package : 'OpenPonk-Zoomer',
@@ -27,17 +28,40 @@ OPDisplayScaleModel >> activeSource: aSymbol [
 
 { #category : 'actions' }
 OPDisplayScaleModel >> applyBaseDPI: aFloat [
-	OSSDL2BackendWindow screenScaleFactorBaseDPI: aFloat asFloat
+	backendBaseDPI := aFloat asFloat.
+	OSSDL2BackendWindow screenScaleFactorBaseDPI: backendBaseDPI.
+	WorldMorph zoomFactor: 1
 ]
 
 { #category : 'calculating' }
 OPDisplayScaleModel >> assumedDPI [
 
-	((horizontalDPI closeTo: verticalDPI) and: [ (horizontalDPI closeTo: self defaultBaseDPI) not ]) ifTrue: [ ^ horizontalDPI ].
+	(horizontalDPI closeTo: verticalDPI) ifTrue: [ ^ horizontalDPI ].
 	(horizontalDPI closeTo: self defaultBaseDPI) ifFalse: [ ^ horizontalDPI ].
 	(verticalDPI closeTo: self defaultBaseDPI) ifFalse: [ ^ verticalDPI ].
 	(diagonalDPI closeTo: self defaultBaseDPI) ifFalse: [ ^ diagonalDPI ].
 	^ self defaultBaseDPI
+]
+
+{ #category : 'calculating' }
+OPDisplayScaleModel >> availableTargetZoomPercentages [
+	| options currentEffective defaultZoom |
+	options := Set withAll: #( 100 200 300 ).
+	currentEffective := self currentEffectiveZoomPercentage.
+	currentEffective > 0 ifTrue: [ options add: currentEffective ].
+	defaultZoom := self defaultZoomPercentage.
+	defaultZoom > 0 ifTrue: [ options add: defaultZoom ].
+	^ options asSortedCollection asArray
+]
+
+{ #category : 'accessing' }
+OPDisplayScaleModel >> backendBaseDPI [
+	^ backendBaseDPI
+]
+
+{ #category : 'accessing' }
+OPDisplayScaleModel >> backendBaseDPI: aFloat [
+	backendBaseDPI := aFloat ifNotNil: [ :value | value asFloat ]
 ]
 
 { #category : 'calculating' }
@@ -47,17 +71,32 @@ OPDisplayScaleModel >> computedBaseDPIForTargetPercentage: aPercentage usingDPI:
 
 { #category : 'calculating' }
 OPDisplayScaleModel >> computedTargetBaseDPIFor: aPercentage [
+
 	^ self computedBaseDPIForTargetPercentage: aPercentage usingDPI: self selectedDPI
 ]
 
 { #category : 'accessing' }
 OPDisplayScaleModel >> currentBackendBaseDPI [
-	^ OSSDL2BackendWindow screenScaleFactorBaseDPI
+	^ backendBaseDPI ifNil: [ OSSDL2BackendWindow screenScaleFactorBaseDPI ]
+]
+
+{ #category : 'calculating' }
+OPDisplayScaleModel >> currentEffectiveZoomPercentage [
+	| base |
+	base := self currentBackendBaseDPI.
+	(base isNil or: [ base isZero ]) ifTrue: [ ^ 100 ].
+	^ ((self selectedDPI / base) * 100) rounded
 ]
 
 { #category : 'constants' }
 OPDisplayScaleModel >> defaultBaseDPI [
-	^ 96.0
+
+	^ OSPlatform current osWindowScreenScaleFactorBaseDPI
+]
+
+{ #category : 'calculating' }
+OPDisplayScaleModel >> defaultZoomPercentage [
+	^ self estimatedOSZoomFor: self selectedDPI
 ]
 
 { #category : 'accessing' }
@@ -93,18 +132,23 @@ OPDisplayScaleModel >> initialize [
 
 { #category : 'actions' }
 OPDisplayScaleModel >> readDisplayDPI [
-	ExternalAddress allocateMemoryOfSizes: #( 4 4 4 ) during: [ :ddpi :hdpi :vdpi |
-		| returnCode |
-		returnCode := SDL2 getDisplay: 0 ddpi: ddpi hdpi: hdpi vdpi: vdpi.
-		returnCode isZero
-			ifTrue: [
-				diagonalDPI := (ddpi floatAt: 1) asFloat.
-				horizontalDPI := (hdpi floatAt: 1) asFloat.
-				verticalDPI := (vdpi floatAt: 1) asFloat ]
-			ifFalse: [
-				diagonalDPI := self defaultBaseDPI.
-				horizontalDPI := self defaultBaseDPI.
-				verticalDPI := self defaultBaseDPI ] ]
+	[
+		ExternalAddress allocateMemoryOfSizes: #( 4 4 4 ) during: [ :ddpi :hdpi :vdpi |
+			| returnCode |
+			returnCode := SDL2 getDisplay: 0 ddpi: ddpi hdpi: hdpi vdpi: vdpi.
+			returnCode isZero
+				ifTrue: [
+					diagonalDPI := (ddpi floatAt: 1) asFloat.
+					horizontalDPI := (hdpi floatAt: 1) asFloat.
+					verticalDPI := (vdpi floatAt: 1) asFloat ]
+				ifFalse: [
+					diagonalDPI := self defaultBaseDPI.
+					horizontalDPI := self defaultBaseDPI.
+					verticalDPI := self defaultBaseDPI ] ]
+	] on: Error do: [
+		diagonalDPI := self defaultBaseDPI.
+		horizontalDPI := self defaultBaseDPI.
+		verticalDPI := self defaultBaseDPI ]
 ]
 
 { #category : 'actions' }

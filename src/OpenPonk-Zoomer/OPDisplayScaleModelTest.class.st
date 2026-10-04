@@ -6,7 +6,8 @@ Class {
 	#superclass : 'TestCase',
 	#instVars : [
 		'scaleModel',
-		'initialBaseDPI'
+		'initialBaseDPI',
+		'initialZoomFactor'
 	],
 	#category : 'OpenPonk-Zoomer-Tests',
 	#package : 'OpenPonk-Zoomer',
@@ -17,18 +18,30 @@ Class {
 OPDisplayScaleModelTest >> setUp [
 	super setUp.
 	initialBaseDPI := OSSDL2BackendWindow screenScaleFactorBaseDPI.
-	scaleModel := OPDisplayScaleModel new
+	initialZoomFactor := WorldMorph zoomFactor.
+	scaleModel := OPDisplayScaleModel new.
+	scaleModel backendBaseDPI: 96.0
 ]
 
 { #category : 'running' }
 OPDisplayScaleModelTest >> tearDown [
-	OSSDL2BackendWindow screenScaleFactorBaseDPI: initialBaseDPI.
+	initialBaseDPI ifNotNil: [ :base |
+		OSSDL2BackendWindow screenScaleFactorBaseDPI: base ].
+	initialZoomFactor ifNotNil: [ :zoom |
+		WorldMorph zoomFactor: zoom ].
 	super tearDown
 ]
 
 { #category : 'tests' }
+OPDisplayScaleModelTest >> testApplyBaseDPIResetsWorldMorphZoomFactor [
+	WorldMorph zoomFactor: 2.
+	scaleModel applyBaseDPI: 96.0.
+	self assert: WorldMorph zoomFactor equals: 1
+]
+
+{ #category : 'tests' }
 OPDisplayScaleModelTest >> testAssumedDPIIndependentOfCurrentBackendBaseDPI [
-	OSSDL2BackendWindow screenScaleFactorBaseDPI: 120.0.
+	scaleModel backendBaseDPI: 120.0.
 	scaleModel diagonalDPI: 96.0 horizontalDPI: 120.0 verticalDPI: 120.0.
 	self assert: scaleModel assumedDPI equals: 120.0
 ]
@@ -37,6 +50,24 @@ OPDisplayScaleModelTest >> testAssumedDPIIndependentOfCurrentBackendBaseDPI [
 OPDisplayScaleModelTest >> testAssumedDPIPrefersScaledAxisWhenDiagonalIsBogus [
 	scaleModel diagonalDPI: 96.0 horizontalDPI: 120.0 verticalDPI: 120.0.
 	self assert: scaleModel assumedDPI equals: 120.0
+]
+
+{ #category : 'tests' }
+OPDisplayScaleModelTest >> testAvailableTargetZoomPercentagesIncludesDefaultZoom [
+	scaleModel backendBaseDPI: 120.0.
+	scaleModel diagonalDPI: 120.0 horizontalDPI: 120.0 verticalDPI: 120.0.
+	"Current effective zoom is 100 %, default uncompensated zoom is 125 %"
+	self assert: scaleModel availableTargetZoomPercentages equals: #( 100 125 200 300 )
+]
+
+{ #category : 'tests' }
+OPDisplayScaleModelTest >> testAvailableTargetZoomPercentagesIncludesNonStandardCurrentZoom [
+	scaleModel backendBaseDPI: 96.0.
+	scaleModel diagonalDPI: 96.0 horizontalDPI: 96.0 verticalDPI: 96.0.
+	self assert: scaleModel availableTargetZoomPercentages equals: #( 100 200 300 ).
+
+	scaleModel diagonalDPI: 120.0 horizontalDPI: 120.0 verticalDPI: 120.0.
+	self assert: scaleModel availableTargetZoomPercentages equals: #( 100 125 200 300 )
 ]
 
 { #category : 'tests' }
@@ -57,6 +88,25 @@ OPDisplayScaleModelTest >> testComputedTargetBaseDPIForSelectedSource [
 	scaleModel activeSource: #diagonal.
 	self assert: (scaleModel computedTargetBaseDPIFor: 100) equals: 96.0.
 	self assert: (scaleModel computedTargetBaseDPIFor: 200) equals: 48.0
+]
+
+{ #category : 'tests' }
+OPDisplayScaleModelTest >> testCurrentEffectiveZoomPercentage [
+	scaleModel diagonalDPI: 120.0 horizontalDPI: 120.0 verticalDPI: 120.0.
+	scaleModel backendBaseDPI: 96.0.
+	self assert: scaleModel currentEffectiveZoomPercentage equals: 125.
+
+	scaleModel backendBaseDPI: 120.0.
+	self assert: scaleModel currentEffectiveZoomPercentage equals: 100
+]
+
+{ #category : 'tests' }
+OPDisplayScaleModelTest >> testDefaultZoomPercentage [
+	scaleModel diagonalDPI: 120.0 horizontalDPI: 120.0 verticalDPI: 120.0.
+	self assert: scaleModel defaultZoomPercentage equals: 125.
+
+	scaleModel diagonalDPI: 96.0 horizontalDPI: 96.0 verticalDPI: 96.0.
+	self assert: scaleModel defaultZoomPercentage equals: 100
 ]
 
 { #category : 'tests' }
