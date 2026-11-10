@@ -91,10 +91,11 @@ OPZoomerTest >> testButtonsOrderRefreshPrecedesApply [
 
 { #category : 'tests' }
 OPZoomerTest >> testCanOpenWindow [
+
 	zoomer := OPZoomer new.
 	window := zoomer asWindow.
 	self assert: window isNotNil.
-	self assert: zoomer title isNotEmpty
+	self denyEmpty: zoomer title
 ]
 
 { #category : 'tests' }
