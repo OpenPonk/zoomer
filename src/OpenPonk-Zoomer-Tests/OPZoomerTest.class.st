@@ -10,9 +10,9 @@ Class {
 		'initialBaseDPI',
 		'initialZoomFactor'
 	],
-	#category : 'OpenPonk-Zoomer-Tests',
-	#package : 'OpenPonk-Zoomer',
-	#tag : 'Tests'
+	#category : 'OpenPonk-Zoomer-Tests-UI',
+	#package : 'OpenPonk-Zoomer-Tests',
+	#tag : 'UI'
 }
 
 { #category : 'running' }
