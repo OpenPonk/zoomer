@@ -67,25 +67,26 @@ OPZoomerTest >> testApplyZoomResetsWorldMorphZoomFactor [
 
 { #category : 'tests' }
 OPZoomerTest >> testButtonsOrderRefreshPrecedesApply [
+
 	| morph refreshMorph applyMorph |
 	zoomer := OPZoomer new.
 	morph := zoomer build.
 	morph extent: 480 @ 380.
 	morph fullBounds.
 	refreshMorph := morph allMorphs
-		detect: [ :each | (each respondsTo: #label) and: [ each label asString = 'Refresh' ] ]
-		ifNone: [
-			morph allMorphs
-				detect: [ :each | (each respondsTo: #text) and: [ each text asString = 'Refresh' ] ]
-				ifNone: [ nil ] ].
+		                detect: [ :each | (each respondsTo: #label) and: [ each label asString = 'Refresh' ] ]
+		                ifNone: [
+		                morph allMorphs
+			                detect: [ :each | (each respondsTo: #text) and: [ each text asString = 'Refresh' ] ]
+			                ifNone: [ nil ] ].
 	applyMorph := morph allMorphs
-		detect: [ :each | (each respondsTo: #label) and: [ each label asString = 'Apply Zoom' ] ]
-		ifNone: [
-			morph allMorphs
-				detect: [ :each | (each respondsTo: #text) and: [ each text asString = 'Apply Zoom' ] ]
-				ifNone: [ nil ] ].
-	self assert: refreshMorph isNotNil description: 'Refresh button morph must exist'.
-	self assert: applyMorph isNotNil description: 'Apply Zoom button morph must exist'.
+		              detect: [ :each | (each respondsTo: #label) and: [ each label asString = 'Apply Zoom' ] ]
+		              ifNone: [
+		              morph allMorphs
+			              detect: [ :each | (each respondsTo: #text) and: [ each text asString = 'Apply Zoom' ] ]
+			              ifNone: [ nil ] ].
+	self assert: refreshMorph class identicalTo: TextMorph.
+	self assert: applyMorph class identicalTo: TextMorph.
 	self assert: refreshMorph bounds left < applyMorph bounds left description: 'Refresh button must precede Apply Zoom button'
 ]
 
@@ -94,7 +95,8 @@ OPZoomerTest >> testCanOpenWindow [
 
 	zoomer := OPZoomer new.
 	window := zoomer asWindow.
-	self assert: window isNotNil.
+	self assert: window class identicalTo: SpWindowPresenter.
+	self assert: window presenter identicalTo: zoomer.
 	self denyEmpty: zoomer title
 ]
 
@@ -119,84 +121,111 @@ OPZoomerTest >> testDisplayStringForZoomPercentage [
 
 { #category : 'tests' }
 OPZoomerTest >> testInstantiation [
+
 	zoomer := OPZoomer new.
-	self assert: zoomer scaleModel isNotNil
+	self assert: zoomer scaleModel class identicalTo: OPDisplayScaleModel
 ]
 
 { #category : 'tests' }
 OPZoomerTest >> testMetricRowsAreVisibleAndDoNotOverlapWithTargetConfig [
+
 	| morph verticalLabelMorph targetConfigHeaderMorph |
 	zoomer := OPZoomer new.
 	morph := zoomer build.
 	morph extent: 480 @ 380.
 	morph fullBounds.
 	verticalLabelMorph := morph allMorphs
-		detect: [ :each | (each isKindOf: LabelMorph) and: [ each contents asString beginsWith: 'Vertical:' ] ]
-		ifNone: [ nil ].
+		                      detect: [ :each | (each isKindOf: LabelMorph) and: [ each contents asString beginsWith: 'Vertical:' ] ]
+		                      ifNone: [ nil ].
 	targetConfigHeaderMorph := morph allMorphs
-		detect: [ :each | (each isKindOf: LabelMorph) and: [ each contents asString beginsWith: 'Target Configuration:' ] ]
-		ifNone: [ nil ].
-	self assert: verticalLabelMorph isNotNil description: 'Vertical metrics row must exist in morph tree'.
-	self assert: targetConfigHeaderMorph isNotNil description: 'Target Configuration section header must exist'.
-	self assert: verticalLabelMorph bounds bottom <= targetConfigHeaderMorph bounds top
+		                           detect: [ :each |
+		                           (each isKindOf: LabelMorph) and: [ each contents asString beginsWith: 'Target Configuration:' ] ]
+		                           ifNone: [ nil ].
+	self assert: verticalLabelMorph class identicalTo: LabelMorph.
+	self assert: targetConfigHeaderMorph class identicalTo: LabelMorph.
+	self
+		assert: verticalLabelMorph bounds bottom <= targetConfigHeaderMorph bounds top
 		description: 'Vertical metrics row must be completely above Target Configuration section without overlapping'
 ]
 
 { #category : 'tests' }
 OPZoomerTest >> testMetricRowsAreVisibleInBuiltMorph [
+
 	| morph assumedLabelMorph |
 	zoomer := OPZoomer new.
 	morph := zoomer build.
 	assumedLabelMorph := morph allMorphs
-		detect: [ :each | (each isKindOf: LabelMorph) and: [ each contents asString beginsWith: 'Assumed:' ] ]
-		ifNone: [ nil ].
-	self assert: assumedLabelMorph isNotNil description: 'Assumed label morph must be present in built morph'.
-	self assert: (morph bounds containsRect: assumedLabelMorph bounds) description: 'Assumed label must be positioned within main morph bounds'.
-	self assert: assumedLabelMorph bounds bottom <= morph bounds bottom description: 'Assumed label must not be clipped out of morph bounds'
+		                     detect: [ :each | (each isKindOf: LabelMorph) and: [ each contents asString beginsWith: 'Assumed:' ] ]
+		                     ifNone: [ nil ].
+	self assert: assumedLabelMorph class identicalTo: LabelMorph.
+	self
+		assert: (morph bounds containsRect: assumedLabelMorph bounds)
+		description: 'Assumed label must be positioned within main morph bounds'.
+	self
+		assert: assumedLabelMorph bounds bottom <= morph bounds bottom
+		description: 'Assumed label must not be clipped out of morph bounds'
 ]
 
 { #category : 'tests' }
 OPZoomerTest >> testOpenClassMethodOpensWindow [
+
 	window := OPZoomer open.
-	self assert: window isNotNil description: 'OPZoomer class >> #open must return an opened window'.
+	self assert: window class identicalTo: SpWindowPresenter.
+	self assert: window presenter class identicalTo: OPZoomer.
 	self assert: window isOpen description: 'Window must be open'
 ]
 
 { #category : 'tests' }
 OPZoomerTest >> testRefreshActionExistsAndUpdatesModel [
+
+	| expectedDpiString |
 	zoomer := OPZoomer new.
-	self assert: (zoomer respondsTo: #refresh).
-	self assert: (zoomer respondsTo: #refreshButton)
+	self assert: zoomer refreshButton class identicalTo: SpButtonPresenter.
+	self assert: zoomer refreshButton label equals: 'Refresh'.
+	(zoomer instVarNamed: #assumedDpiLabel) label: 'STALE'.
+	(zoomer instVarNamed: #assumedZoomLabel) label: 'STALE'.
+	zoomer targetZoomDropList items: #( 999 ).
+	zoomer refreshButton click.
+	expectedDpiString := zoomer scaleModel assumedDPI printShowingDecimalPlaces: 1.
+	self assert: (zoomer instVarNamed: #assumedDpiLabel) label equals: expectedDpiString.
+	self
+		assert: (zoomer instVarNamed: #assumedZoomLabel) label
+		equals: (zoomer scaleModel estimatedOSZoomFor: zoomer scaleModel assumedDPI) asString , ' %'.
+	self assert: zoomer targetZoomDropList items equals: zoomer scaleModel availableTargetZoomPercentages.
+	self assert: zoomer targetZoomDropList selectedItem equals: zoomer scaleModel currentEffectiveZoomPercentage
 ]
 
 { #category : 'tests' }
 OPZoomerTest >> testResetButtonDoesNotExist [
-	zoomer := OPZoomer new.
-	self deny: (zoomer respondsTo: #resetButton)
-		description: 'Reset button accessor must be removed from presenter'.
-	self deny: (zoomer respondsTo: #resetZoom)
-		description: 'Reset action method must be removed from presenter'
+
+	self denyCollection: OPZoomer allSelectors includesAny: #( #resetButton #resetZoom )
 ]
 
 { #category : 'tests' }
 OPZoomerTest >> testSettingsDeclarationRegistersButtonUnderAppearance [
-	| settingMethods |
-	settingMethods := OPZoomer class methods select: [ :m | (m pragmaAt: #systemsettings) isNotNil ].
-	self assert: settingMethods isNotEmpty description: 'OPZoomer class must declare a <systemsettings> method'.
-	self assert: (settingMethods anySatisfy: [ :m | m sourceCode includesSubstring: 'parent: #appearance' ])
-		description: 'Zoomer setting in OPZoomer must be registered under #appearance to be independent of OpenPonk'
+
+	| settingMethods builder settingNode |
+	settingMethods := OPZoomer class methods select: [ :eachMethod | (eachMethod pragmaAt: #systemsettings) isNotNil ].
+	self assert: settingMethods size equals: 1.
+	builder := SettingTreeBuilder new.
+	OPZoomer settingsOn: builder.
+	self assert: builder nodeList size equals: 1.
+	settingNode := builder nodeList first.
+	self assert: settingNode parentName equals: #appearance.
+	self assert: settingNode item name equals: #open.
+	self assert: settingNode item target identicalTo: OPZoomer
 ]
 
 { #category : 'tests' }
 OPZoomerTest >> testTargetZoomDropListPrefillsCurrentZoom [
+
 	| customModel |
 	customModel := OPDisplayScaleModel new.
 	customModel backendBaseDPI: 96.0.
 	customModel diagonalDPI: 120.0 horizontalDPI: 120.0 verticalDPI: 120.0.
 	zoomer := OPZoomer new.
 	zoomer scaleModel: customModel.
-	self assert: (zoomer targetZoomDropList items includes: 125)
-		description: 'Target zoom drop list must include non-standard current zoom percentage'.
+	self assertCollection: zoomer targetZoomDropList items includesAll: #( 125 ).
 	self assert: zoomer targetZoomDropList selectedItem equals: 125
 ]
 
