@@ -10,10 +10,31 @@ Class {
 		'initialBaseDPI',
 		'initialZoomFactor'
 	],
+	#classVars : [
+		'PausedOwnerProcess'
+	],
 	#category : 'OpenPonk-Zoomer-Tests-UI',
 	#package : 'OpenPonk-Zoomer-Tests',
 	#tag : 'UI'
 }
+
+{ #category : 'running' }
+OPZoomerTest >> canPauseMorphicUIProcess [
+
+	| uiProcess |
+	PausedOwnerProcess == Processor activeProcess ifTrue: [ ^ false ].
+	self currentWorld ifNil: [ ^ false ].
+	uiProcess := MorphicUIManager uiProcess.
+	uiProcess ifNil: [ ^ false ].
+	uiProcess == Processor activeProcess ifTrue: [ ^ false ].
+	^ uiProcess isTerminated not and: [ uiProcess isSuspended not ]
+]
+
+{ #category : 'running' }
+OPZoomerTest >> runCase [
+
+	^ self withMorphicUIProcessPausedDo: [ super runCase ]
+]
 
 { #category : 'running' }
 OPZoomerTest >> setUp [
@@ -235,4 +256,27 @@ OPZoomerTest >> testWindowTitle [
 	window := zoomer asWindow.
 	self assert: window title equals: zoomer title.
 	self deny: window title equals: 'Unnamed Window'
+]
+
+{ #category : 'running' }
+OPZoomerTest >> withMorphicUIProcessPausedDo: aBlock [
+
+	| enteredSemaphore releaseSemaphore isCancelled |
+	self canPauseMorphicUIProcess ifFalse: [ ^ aBlock value ].
+	enteredSemaphore := Semaphore new.
+	releaseSemaphore := Semaphore new.
+	isCancelled := false.
+	self currentWorld defer: [
+			isCancelled ifFalse: [
+					enteredSemaphore signal.
+					releaseSemaphore wait ] ].
+	(enteredSemaphore waitTimeoutSeconds: 2) ifTrue: [
+			isCancelled := true.
+			releaseSemaphore signal.
+			^ aBlock value ].
+	^ [
+		  PausedOwnerProcess := Processor activeProcess.
+		  aBlock value ] ensure: [
+			  PausedOwnerProcess == Processor activeProcess ifTrue: [ PausedOwnerProcess := nil ].
+			  releaseSemaphore signal ]
 ]
