@@ -54,6 +54,27 @@ OPZoomerTest >> tearDown [
 ]
 
 { #category : 'tests' }
+OPZoomerTest >> testApplyButtonAppliesSelectedZoomAndUpdatesUI [
+
+	| customModel |
+	WorldMorph zoomFactor: 2.
+	customModel := OPDisplayScaleModel new.
+	customModel backendBaseDPI: 96.0.
+	customModel diagonalDPI: 120.0 horizontalDPI: 120.0 verticalDPI: 120.0.
+	zoomer := OPZoomer new.
+	zoomer scaleModel: customModel.
+	zoomer targetZoomDropList selectItem: 100.
+
+	zoomer applyButton click.
+
+	self assert: OSSDL2BackendWindow screenScaleFactorBaseDPI equals: 120.0.
+	self assert: WorldMorph zoomFactor equals: 1.
+	self assert: (zoomer instVarNamed: #currentBaseDPILabel) label equals: '120.00 DPI'.
+	self assert: zoomer targetZoomDropList selectedItem equals: 100.
+	self deny: zoomer applyButton isEnabled description: 'Apply button must become disabled after applying the selected zoom'
+]
+
+{ #category : 'tests' }
 OPZoomerTest >> testApplyButtonDisabledWhenBaseDPIMatches [
 	| customModel |
 	customModel := OPDisplayScaleModel new.
@@ -79,6 +100,23 @@ OPZoomerTest >> testApplyButtonEnabledWhenBaseDPIDiffers [
 ]
 
 { #category : 'tests' }
+OPZoomerTest >> testApplyZoomFallsBackTo100WhenNoTargetSelected [
+
+	| customModel |
+	customModel := OPDisplayScaleModel new.
+	customModel backendBaseDPI: 96.0.
+	customModel diagonalDPI: 144.0 horizontalDPI: 144.0 verticalDPI: 144.0.
+	zoomer := OPZoomer new.
+	zoomer scaleModel: customModel.
+	zoomer targetZoomDropList resetSelection.
+
+	zoomer applyZoom.
+
+	self assert: OSSDL2BackendWindow screenScaleFactorBaseDPI equals: 144.0.
+	self assert: zoomer targetZoomDropList selectedItem equals: 100
+]
+
+{ #category : 'tests' }
 OPZoomerTest >> testApplyZoomResetsWorldMorphZoomFactor [
 	WorldMorph zoomFactor: 2.
 	zoomer := OPZoomer new.
@@ -95,17 +133,11 @@ OPZoomerTest >> testButtonsOrderRefreshPrecedesApply [
 	morph extent: 480 @ 380.
 	morph fullBounds.
 	refreshMorph := morph allMorphs
-		                detect: [ :each | (each respondsTo: #label) and: [ each label asString = 'Refresh' ] ]
-		                ifNone: [
-		                morph allMorphs
-			                detect: [ :each | (each respondsTo: #text) and: [ each text asString = 'Refresh' ] ]
-			                ifNone: [ nil ] ].
+		                detect: [ :each | (each isKindOf: TextMorph) and: [ each text asString = 'Refresh' ] ]
+		                ifNone: [ nil ].
 	applyMorph := morph allMorphs
-		              detect: [ :each | (each respondsTo: #label) and: [ each label asString = 'Apply Zoom' ] ]
-		              ifNone: [
-		              morph allMorphs
-			              detect: [ :each | (each respondsTo: #text) and: [ each text asString = 'Apply Zoom' ] ]
-			              ifNone: [ nil ] ].
+		              detect: [ :each | (each isKindOf: TextMorph) and: [ each text asString = 'Apply Zoom' ] ]
+		              ifNone: [ nil ].
 	self assert: refreshMorph class identicalTo: TextMorph.
 	self assert: applyMorph class identicalTo: TextMorph.
 	self assert: refreshMorph bounds left < applyMorph bounds left description: 'Refresh button must precede Apply Zoom button'
@@ -197,6 +229,48 @@ OPZoomerTest >> testOpenClassMethodOpensWindow [
 ]
 
 { #category : 'tests' }
+OPZoomerTest >> testPrefillTargetZoomDropListSelectsFirstItemWhenCurrentZoomNotInOptions [
+
+	| customModel |
+	customModel := OPDisplayScaleModel new.
+	customModel backendBaseDPI: 96.0.
+	customModel diagonalDPI: 0.0 horizontalDPI: 0.0 verticalDPI: 0.0.
+	zoomer := OPZoomer new.
+	zoomer scaleModel: customModel.
+
+	self assert: zoomer targetZoomDropList items equals: #( 100 200 300 ).
+	self assert: zoomer targetZoomDropList selectedItem equals: 100
+]
+
+{ #category : 'tests' }
+OPZoomerTest >> testRadioButtonsSwitchActiveSourceAndUpdateComputedValues [
+
+	| customModel |
+	customModel := OPDisplayScaleModel new.
+	customModel backendBaseDPI: 96.0.
+	customModel diagonalDPI: 144.0 horizontalDPI: 120.0 verticalDPI: 192.0.
+	zoomer := OPZoomer new.
+	zoomer scaleModel: customModel.
+
+	(zoomer instVarNamed: #diagonalRadio) state: true.
+	self assert: zoomer scaleModel activeSource equals: #diagonal.
+	self assert: zoomer targetZoomDropList selectedItem equals: 150.
+	self assert: (zoomer instVarNamed: #computedBaseDPILabel) label equals: '96.00 DPI'.
+
+	(zoomer instVarNamed: #horizontalRadio) state: true.
+	self assert: zoomer scaleModel activeSource equals: #horizontal.
+	self assert: zoomer targetZoomDropList selectedItem equals: 125.
+
+	(zoomer instVarNamed: #verticalRadio) state: true.
+	self assert: zoomer scaleModel activeSource equals: #vertical.
+	self assert: zoomer targetZoomDropList selectedItem equals: 200.
+
+	(zoomer instVarNamed: #assumedRadio) state: true.
+	self assert: zoomer scaleModel activeSource equals: #assumed.
+	self assert: zoomer targetZoomDropList selectedItem equals: 125
+]
+
+{ #category : 'tests' }
 OPZoomerTest >> testRefreshActionExistsAndUpdatesModel [
 
 	| expectedDpiString |
@@ -217,9 +291,54 @@ OPZoomerTest >> testRefreshActionExistsAndUpdatesModel [
 ]
 
 { #category : 'tests' }
-OPZoomerTest >> testResetButtonDoesNotExist [
+OPZoomerTest >> testRefreshReloadsExternalBackendBaseDPI [
 
-	self denyCollection: OPZoomer allSelectors includesAny: #( #resetButton #resetZoom )
+	zoomer := OPZoomer new.
+	zoomer scaleModel applyBaseDPI: 120.0.
+	OSSDL2BackendWindow screenScaleFactorBaseDPI: 144.0.
+
+	zoomer refresh.
+
+	self assert: zoomer scaleModel currentBackendBaseDPI equals: 144.0.
+	self assert: (zoomer instVarNamed: #currentBaseDPILabel) label equals: '144.00 DPI'
+]
+
+{ #category : 'tests' }
+OPZoomerTest >> testScaleModelSynchronizesActiveSourceRadioButton [
+
+	| customModel |
+	customModel := OPDisplayScaleModel new.
+	customModel backendBaseDPI: 96.0.
+	customModel diagonalDPI: 144.0 horizontalDPI: 120.0 verticalDPI: 168.0.
+	zoomer := OPZoomer new.
+
+	customModel activeSource: #diagonal.
+	zoomer scaleModel: customModel.
+	self
+		assert: (zoomer instVarNamed: #diagonalRadio) state
+		description: 'Diagonal radio button must be selected when model activeSource is #diagonal'.
+	self
+		deny: (zoomer instVarNamed: #assumedRadio) state
+		description: 'Assumed radio button must be deselected when model activeSource is #diagonal'.
+	self assert: zoomer scaleModel activeSource equals: #diagonal.
+
+	customModel activeSource: #horizontal.
+	zoomer scaleModel: customModel.
+	self
+		assert: (zoomer instVarNamed: #horizontalRadio) state
+		description: 'Horizontal radio button must be selected when model activeSource is #horizontal'.
+
+	customModel activeSource: #vertical.
+	zoomer scaleModel: customModel.
+	self
+		assert: (zoomer instVarNamed: #verticalRadio) state
+		description: 'Vertical radio button must be selected when model activeSource is #vertical'.
+
+	customModel activeSource: #assumed.
+	zoomer scaleModel: customModel.
+	self
+		assert: (zoomer instVarNamed: #assumedRadio) state
+		description: 'Assumed radio button must be selected when model activeSource is #assumed'
 ]
 
 { #category : 'tests' }

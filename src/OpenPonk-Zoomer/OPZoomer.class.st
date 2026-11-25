@@ -237,6 +237,8 @@ OPZoomer >> prefillTargetZoomDropList [
 
 { #category : 'actions' }
 OPZoomer >> refresh [
+
+	scaleModel backendBaseDPI: nil.
 	scaleModel readDisplayDPI.
 	self updateDpiDisplays.
 	self prefillTargetZoomDropList.
@@ -255,7 +257,9 @@ OPZoomer >> scaleModel [
 
 { #category : 'accessing' }
 OPZoomer >> scaleModel: aDisplayScaleModel [
+
 	scaleModel := aDisplayScaleModel.
+	self updateActiveSourceSelection.
 	self updateDpiDisplays.
 	self prefillTargetZoomDropList.
 	self updateComputedValues
@@ -264,6 +268,17 @@ OPZoomer >> scaleModel: aDisplayScaleModel [
 { #category : 'accessing' }
 OPZoomer >> targetZoomDropList [
 	^ targetZoomDropList
+]
+
+{ #category : 'updating' }
+OPZoomer >> updateActiveSourceSelection [
+
+	| activeSource |
+	activeSource := scaleModel activeSource.
+	activeSource = #diagonal ifTrue: [ ^ diagonalRadio state: true ].
+	activeSource = #horizontal ifTrue: [ ^ horizontalRadio state: true ].
+	activeSource = #vertical ifTrue: [ ^ verticalRadio state: true ].
+	assumedRadio state: true
 ]
 
 { #category : 'updating' }

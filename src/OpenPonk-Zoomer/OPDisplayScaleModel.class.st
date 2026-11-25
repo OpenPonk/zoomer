@@ -38,20 +38,19 @@ OPDisplayScaleModel >> assumedDPI [
 
 	(horizontalDPI closeTo: verticalDPI) ifTrue: [ ^ horizontalDPI ].
 	(horizontalDPI closeTo: self defaultBaseDPI) ifFalse: [ ^ horizontalDPI ].
-	(verticalDPI closeTo: self defaultBaseDPI) ifFalse: [ ^ verticalDPI ].
-	(diagonalDPI closeTo: self defaultBaseDPI) ifFalse: [ ^ diagonalDPI ].
-	^ self defaultBaseDPI
+	^ verticalDPI
 ]
 
 { #category : 'calculating' }
 OPDisplayScaleModel >> availableTargetZoomPercentages [
+
 	| options currentEffective defaultZoom |
 	options := Set withAll: #( 100 200 300 ).
 	currentEffective := self currentEffectiveZoomPercentage.
 	currentEffective > 0 ifTrue: [ options add: currentEffective ].
 	defaultZoom := self defaultZoomPercentage.
 	defaultZoom > 0 ifTrue: [ options add: defaultZoom ].
-	^ options asSortedCollection asArray
+	^ options asArray sort
 ]
 
 { #category : 'accessing' }
@@ -149,11 +148,6 @@ OPDisplayScaleModel >> readDisplayDPI [
 		diagonalDPI := self defaultBaseDPI.
 		horizontalDPI := self defaultBaseDPI.
 		verticalDPI := self defaultBaseDPI ]
-]
-
-{ #category : 'actions' }
-OPDisplayScaleModel >> resetToDefaultBaseDPI [
-	self applyBaseDPI: self defaultBaseDPI
 ]
 
 { #category : 'calculating' }

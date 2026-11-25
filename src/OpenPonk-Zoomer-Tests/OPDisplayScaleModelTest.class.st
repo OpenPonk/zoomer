@@ -33,6 +33,23 @@ OPDisplayScaleModelTest >> tearDown [
 ]
 
 { #category : 'tests' }
+OPDisplayScaleModelTest >> testAccessorsReturnActiveSourceAndBackendBaseDPI [
+
+	| freshModel |
+	freshModel := OPDisplayScaleModel new.
+	self assert: freshModel activeSource equals: #assumed.
+	self assert: freshModel backendBaseDPI identicalTo: nil.
+
+	freshModel activeSource: #vertical.
+	freshModel backendBaseDPI: 120.
+	self assert: freshModel activeSource equals: #vertical.
+	self assert: freshModel backendBaseDPI equals: 120.0.
+
+	freshModel applyBaseDPI: 144.
+	self assert: freshModel backendBaseDPI equals: 144.0
+]
+
+{ #category : 'tests' }
 OPDisplayScaleModelTest >> testApplyBaseDPIResetsWorldMorphZoomFactor [
 	WorldMorph zoomFactor: 2.
 	scaleModel applyBaseDPI: 96.0.
@@ -50,6 +67,16 @@ OPDisplayScaleModelTest >> testAssumedDPIIndependentOfCurrentBackendBaseDPI [
 OPDisplayScaleModelTest >> testAssumedDPIPrefersScaledAxisWhenDiagonalIsBogus [
 	scaleModel diagonalDPI: 96.0 horizontalDPI: 120.0 verticalDPI: 120.0.
 	self assert: scaleModel assumedDPI equals: 120.0
+]
+
+{ #category : 'tests' }
+OPDisplayScaleModelTest >> testAssumedDPIReturnsVerticalWhenHorizontalEqualsDefault [
+
+	scaleModel diagonalDPI: 96.0 horizontalDPI: 96.0 verticalDPI: 120.0.
+	self assert: scaleModel assumedDPI equals: 120.0.
+
+	scaleModel diagonalDPI: 120.0 horizontalDPI: 96.0 verticalDPI: 96.0.
+	self assert: scaleModel assumedDPI equals: 96.0
 ]
 
 { #category : 'tests' }
@@ -97,6 +124,14 @@ OPDisplayScaleModelTest >> testCurrentEffectiveZoomPercentage [
 	self assert: scaleModel currentEffectiveZoomPercentage equals: 125.
 
 	scaleModel backendBaseDPI: 120.0.
+	self assert: scaleModel currentEffectiveZoomPercentage equals: 100
+]
+
+{ #category : 'tests' }
+OPDisplayScaleModelTest >> testCurrentEffectiveZoomPercentageFallsBackTo100WhenBaseDPIIsZero [
+
+	scaleModel diagonalDPI: 120.0 horizontalDPI: 120.0 verticalDPI: 120.0.
+	scaleModel backendBaseDPI: 0.0.
 	self assert: scaleModel currentEffectiveZoomPercentage equals: 100
 ]
 
